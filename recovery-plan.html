@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>תוכנית שיקום כלכלי</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Suez+One&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EBF0F2; --ink:#12232B; --soft:#475D67; --line:#C3CFD5; --wash:#DAE4E8;
+  --deficit:#A63A50; --surplus:#1B7A5A; --accent:#2D5C8A; --marker:#E5B238;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --paper:#0E1920; --ink:#E7EFF2; --soft:#9BAFB8; --line:#2B3E48; --wash:#17272F;
+    --deficit:#E3808F; --surplus:#4FC79D; --accent:#82B3E0; --marker:#E5B238;
+  }
+}
+*{box-sizing:border-box}
+html{scroll-padding-top:210px}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:400 17px/1.65 Assistant,"Segoe UI",Arial,sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+h1,h2,h3,.display{font-family:"Suez One","Frank Ruhl Libre",Georgia,serif;font-weight:400;margin:0}
+.n{direction:ltr;unicode-bidi:isolate;display:inline-block}
+:focus-visible{outline:3px solid var(--marker);outline-offset:2px}
+
+/* ---------- sticky balance meter ---------- */
+.meter{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:2px solid var(--ink);padding:14px 0 12px}
+.meter-top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px}
+.meter h1{font-size:clamp(22px,4.4vw,36px);line-height:1.15;max-width:22ch}
+.netbox{text-align:end;flex:none}
+.netbox .lbl{font-size:14px;color:var(--soft);display:block}
+.netbox .num{font-size:clamp(28px,6vw,46px);line-height:1}
+.pos{color:var(--surplus)} .neg{color:var(--deficit)}
+.tracks{display:grid;gap:6px;margin-top:12px}
+.trow{display:grid;grid-template-columns:62px 1fr 84px;align-items:center;gap:10px;font-size:15px}
+.tl{color:var(--soft)}
+.tv{font-weight:700;text-align:end}
+.track{position:relative;height:16px;background:var(--wash);overflow:hidden}
+.fill{position:absolute;inset-block:0;inset-inline-start:0;transition:width .3s ease}
+.fill.inc{background:var(--surplus)} .fill.exp{background:var(--deficit)}
+.hatch{position:absolute;inset-block:0;transition:width .3s ease,inset-inline-start .3s ease;
+  background:repeating-linear-gradient(135deg,var(--h,var(--deficit)) 0 3px,transparent 3px 7px)}
+
+/* ---------- sections ---------- */
+section{padding:44px 0 8px}
+h2{font-size:clamp(26px,4vw,34px);line-height:1.2;margin-bottom:10px}
+.lead{color:var(--soft);max-width:68ch;margin:0 0 6px}
+.base{display:flex;flex-wrap:wrap;gap:8px 36px;margin:18px 0 0;padding:14px 0;border-block:1.5px solid var(--ink)}
+.base div{display:flex;flex-direction:column}
+.base .k{font-size:14px;color:var(--soft)}
+.base .v{font-family:"Suez One",Georgia,serif;font-size:26px;line-height:1.2}
+
+.lever{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 44px;padding:26px 0;border-top:1.5px solid var(--ink)}
+.lever:last-of-type{border-bottom:1.5px solid var(--ink)}
+.lever h3{font-size:25px;line-height:1.2}
+.blurb{color:var(--soft);margin:8px 0 0;max-width:46ch}
+.ctl{align-self:center}
+.save{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.save .num{font-size:34px;line-height:1.1}
+.save .lbl{color:var(--soft);font-size:15px}
+input[type=range]{width:100%;accent-color:var(--accent);margin:12px 0 4px;height:28px}
+.readout{display:flex;justify-content:space-between;gap:12px;color:var(--soft);font-size:15px}
+details{grid-column:1/-1;margin-top:12px}
+summary{cursor:pointer;font-weight:700;padding:6px 0;list-style:none;display:flex;align-items:center;gap:10px}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"";width:9px;height:9px;border-inline-end:2.5px solid var(--ink);border-bottom:2.5px solid var(--ink);transform:rotate(45deg);transition:transform .2s;margin-inline-start:2px}
+details[open] summary::before{transform:rotate(-135deg)}
+.prog{font-weight:400;color:var(--soft);font-size:15px}
+.note{margin:10px 0 0;padding:10px 14px;border-inline-start:4px solid var(--marker);background:var(--wash);font-size:15.5px}
+ol.steps,ul.checks{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:14px}
+.steps label,.checks label{display:grid;grid-template-columns:24px 1fr;gap:12px;cursor:pointer;align-items:start}
+.steps input,.checks input{width:20px;height:20px;margin:3px 0 0;accent-color:var(--accent)}
+.t{display:block;font-weight:700}
+.d{display:block;color:var(--soft);max-width:70ch}
+li.done .t,li.done .d{opacity:.5}
+
+/* ---------- chart ---------- */
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 6px}
+.chip{font:inherit;font-size:15px;font-weight:600;padding:4px 14px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:6px;cursor:pointer}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--paper)}
+.chartbox{overflow-x:auto}
+svg{display:block;width:100%;min-width:640px;height:auto}
+svg text{unicode-bidi:plaintext;font:600 12.5px Assistant,"Segoe UI",Arial,sans-serif;fill:var(--soft)}
+svg .grid{stroke:var(--line);stroke-width:1}
+svg .zero{stroke:var(--ink);stroke-width:2}
+svg .sel{fill:var(--marker);opacity:.2}
+svg .hist{fill:var(--deficit)}
+svg .proj.p{fill:var(--surplus);fill-opacity:.55;stroke:var(--surplus);stroke-width:1.5;stroke-dasharray:4 3}
+svg .proj.m{fill:var(--deficit);fill-opacity:.4;stroke:var(--deficit);stroke-width:1.5;stroke-dasharray:4 3}
+svg .slot{cursor:pointer}
+svg .val{fill:var(--ink)}
+svg .grp{fill:var(--ink);font-size:13px}
+.legend{display:flex;gap:22px;flex-wrap:wrap;font-size:15px;color:var(--soft);margin-top:6px}
+.legend i{display:inline-block;width:14px;height:14px;vertical-align:-2px;margin-inline-end:6px}
+.readout-month{margin:14px 0 0;padding:12px 16px;background:var(--wash);max-width:75ch}
+
+/* ---------- checks + timeline ---------- */
+.checks li{padding:14px 0;border-top:1.5px solid var(--line)}
+.checks li:first-child{border-top:1.5px solid var(--ink)}
+.phase{display:grid;grid-template-columns:150px 1fr;gap:6px 30px;padding:20px 0;border-top:1.5px solid var(--ink)}
+.phase:last-of-type{border-bottom:1.5px solid var(--ink)}
+.phase h3{font-size:21px;line-height:1.3}
+.phase ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.phase label{display:grid;grid-template-columns:24px 1fr;gap:12px;cursor:pointer}
+.phase input{width:20px;height:20px;margin:3px 0 0;accent-color:var(--accent)}
+.phase li.done span{opacity:.5}
+.allprog{margin:8px 0 0;color:var(--soft)}
+.reset{font:inherit;font-size:15px;margin-top:22px;padding:8px 16px;border:1.5px solid var(--ink);background:transparent;color:var(--ink);border-radius:6px;cursor:pointer}
+footer{padding:36px 0 60px;color:var(--soft);font-size:15px;max-width:75ch}
+
+@media (max-width:720px){
+  body{font-size:16px}
+  html{scroll-padding-top:190px}
+  .lever{grid-template-columns:1fr;gap:6px}
+  .phase{grid-template-columns:1fr}
+  .trow{grid-template-columns:52px 1fr 74px;gap:8px;font-size:14px}
+  .meter-top{align-items:flex-start}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important}
+}
+</style>
+</head>
+<body>
+
+<header class="meter">
+  <div class="wrap">
+    <div class="meter-top">
+      <h1 id="headline">טוען…</h1>
+      <div class="netbox" aria-live="polite">
+        <span class="lbl" id="netLbl">מאזן חודשי</span>
+        <span class="num"><span class="n" id="netNum">0</span></span>
+      </div>
+    </div>
+    <div class="tracks">
+      <div class="trow"><span class="tl">הכנסות</span>
+        <div class="track"><i class="fill inc" id="fInc"></i><i class="hatch" id="hInc"></i></div>
+        <b class="tv"><span class="n" id="vInc"></span></b></div>
+      <div class="trow"><span class="tl">הוצאות</span>
+        <div class="track"><i class="fill exp" id="fExp"></i><i class="hatch" id="hExp"></i></div>
+        <b class="tv"><span class="n" id="vExp"></span></b></div>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <h2>נקודת המוצא</h2>
+    <p class="lead">הנתונים לקוחים מ-RiseUp, ממוצע שלושת חודשי התזרים האחרונים (אוגוסט עד אוקטובר 2026). הסליידרים למטה קובעים כמה אתם מתכוונים לקצץ בכל תחום. הפס שבראש העמוד והגרף מתעדכנים מיד. זו הדמיה שמבוססת על ההנחות שתבחרו, לא תחזית.</p>
+    <div class="base">
+      <div><span class="k">הכנסות בחודש</span><span class="v"><span class="n">44,018</span> ₪</span></div>
+      <div><span class="k">הוצאות בחודש</span><span class="v"><span class="n">58,299</span> ₪</span></div>
+      <div><span class="k">גרעון בחודש</span><span class="v neg"><span class="n">−14,281</span> ₪</span></div>
+    </div>
+  </section>
+
+  <section id="levers">
+    <h2>מה מקצצים, וכמה</h2>
+    <p class="lead">בכל שורה: הזיזו את הסליידר, ופתחו את “איך מממשים” כדי לראות מה עושים בפועל. סמנו כל צעד שביצעתם.</p>
+    <div id="leverList"></div>
+  </section>
+
+  <section id="chartSec">
+    <h2>איך זה נראה לאורך זמן</h2>
+    <p class="lead">המאזן החודשי בפועל (בלי משיכות מפקדונות) ומה שהסליידרים מייצרים בחודשים הבאים. לחצו על עמודה או על חודש כדי להציג אותו בפס שבראש העמוד.</p>
+    <div class="chips" id="chips" role="group" aria-label="בחירת חודש להצגה"></div>
+    <div class="chartbox"><svg id="chart" viewBox="0 0 860 330" role="img" aria-label="גרף מאזן חודשי: חודשים שעברו ותחזית"></svg></div>
+    <div class="legend">
+      <span><i style="background:var(--deficit)"></i>בפועל</span>
+      <span><i style="background:var(--surplus);opacity:.55"></i>תחזית לפי הסליידרים (מקווקו)</span>
+    </div>
+    <p class="readout-month" id="monthRead" aria-live="polite"></p>
+  </section>
+
+  <section id="checks">
+    <h2>לבדוק: פוטנציאל שלא נספר</h2>
+    <p class="lead">הדברים האלה לא נכנסו לחישוב, כי חסר מידע. כל אחד מהם יכול לשנות את התמונה.</p>
+    <ul class="checks" id="checkList"></ul>
+  </section>
+
+  <section id="timeline">
+    <h2>סדר פעולות</h2>
+    <p class="allprog" id="allProg"></p>
+    <div id="phaseList"></div>
+    <button class="reset" id="resetBtn" type="button">איפוס הנחות וסימונים</button>
+  </section>
+
+  <footer>
+    <p>חודש תזרים ב-RiseUp רץ בערך מה-10 בחודש עד ה-9 בחודש הבא. “בפועל” לא כולל משיכות מפקדונות (כ-25,500 ₪ במאי עד יולי). הירידה בתשלומים מבוססת רק על תשלומים שכבר קיימים ב-RiseUp, וכל תשלום חדש מקטין אותה. הערכות הקיצוץ הן הנחות, לא נתונים. זה אינו ייעוץ פיננסי. לפני החלטות על משכנתא או הלוואות כדאי להתייעץ עם איש מקצוע.</p>
+  </footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- data ---------- */
+  var BASE = { income: 44018, expense: 58299, inst: 10046, scale: 65000 };
+
+  var MONTHS = [
+    { n: "דצמבר", s: "דצ׳", sched: 4331 },
+    { n: "ינואר", s: "ינו׳", sched: 3455 },
+    { n: "פברואר", s: "פבר׳", sched: 3112 },
+    { n: "מרץ", s: "מרץ", sched: 2800 },
+    { n: "אפריל", s: "אפר׳", sched: 2321 },
+    { n: "מאי", s: "מאי", sched: 2018 },
+    { n: "יוני", s: "יוני", sched: 1308 }
+  ];
+
+  var HISTORY = [
+    { s: "מאי", v: -28260 }, { s: "יוני", v: -24746 }, { s: "יולי", v: -34807 },
+    { s: "אוג׳", v: -20455 }, { s: "ספט׳", v: -13925 }, { s: "אוק׳", v: -8465 }
+  ];
+
+  var LEVERS = [
+    { id: "eat", kind: "target", title: "אוכל בחוץ ומשלוחים", base: 3509, min: 500, max: 3509, step: 50, def: 1500,
+      blurb: "כיום כ-3,509 ₪ בחודש. ב-RiseUp כבר הוגדר יעד של 1,000 ₪, אבל בפועל הוא לא מחייב.",
+      steps: [
+        { t: "קבעו תקרה שבועית", d: "1,500 ₪ בחודש הם כ-350 ₪ בשבוע. עדכנו ב-RiseUp יעד ביניים של 1,500 ₪, ובעוד חודשיים רדו ל-1,000 ₪." },
+        { t: "הוציאו את הכרטיס מאפליקציות המשלוחים", d: "מחקו את כרטיס האשראי השמור באפליקציות כמו Wolt, והסירו אותן ממסך הבית. כשכל הזמנה דורשת הקלדת כרטיס, יש פחות הזמנות אימפולסיביות." },
+        { t: "תכננו מראש יציאה אחת או שתיים בשבוע", d: "החליטו אילו ארוחות בחוץ שוות לכם את הכסף, והשאר בבית. בישול כפול בערב נותן ארוחת צהריים למחרת." },
+        { t: "הקצו כרטיס אחד לאוכל בחוץ", d: "או משכו מזומן שבועי קבוע לקטגוריה הזו. כשהמסגרת נגמרת, מחכים לשבוע הבא." },
+        { t: "בדקו את המצב בכל יום ראשון", d: "שתי דקות ב-RiseUp: כמה הוצאתם השבוע בקטגוריה וכמה נשאר עד סוף החודש." }
+      ] },
+    { id: "groc", kind: "target", title: "סופר וקניות אונליין", base: 5528, min: 3500, max: 5528, step: 50, def: 4500,
+      blurb: "כיום כ-5,528 ₪ בחודש. ברשימת העסקאות יש הרבה קניות קטנות בסופרים שכונתיים לצד סלי אונליין גדולים.",
+      steps: [
+        { t: "תכננו רשימה שבועית מראש", d: "בדקו מה יש בבית, תכננו תפריט לפי מבצעי השבוע, וקנו רק לפי הרשימה." },
+        { t: "עברו לקנייה גדולה אחת בשבוע", d: "במינימרקטים ובסופרים שכונתיים המחיר ליחידה גבוה יותר, והקניות הקטנות מצטברות. קנייה אחת בשבוע, אונליין או בסניף, חוסכת גם את הקנייה האימפולסיבית." },
+        { t: "קבעו תקרה שבועית", d: "4,500 ₪ בחודש הם כ-1,050 ₪ בשבוע. אם סל האונליין עובר את התקרה, מורידים פריטים לפני התשלום." },
+        { t: "השוו מחירים וניצלו מבצעי מועדון", d: "השוו את אותו סל בין רשתות באתרי השוואת מחירים, והעדיפו מותג פרטי במוצרי בסיס." },
+        { t: "צמצמו בזבוז אוכל", d: "הקפיאו עודפים, ותכננו ארוחה שמשתמשת במה שנשאר לפני שקונים מחדש." }
+      ] },
+    { id: "disc", kind: "target", title: "קניות, ביגוד, “כללי”, מזומן ודיגיטל", base: 7806, min: 2500, max: 7806, step: 100, def: 4700,
+      blurb: "כיום כ-7,806 ₪ בחודש: קניות 2,299, ביגוד 1,736, “כללי” 1,993, מזומן 1,346 ודיגיטל 432.",
+      note: "תקרות מוצעות לסך של כ-4,650 ₪ בחודש: ביגוד 700, קניות 1,300, “כללי” 1,200, מזומן 1,000, דיגיטל 450.",
+      steps: [
+        { t: "חכו 48 שעות לפני רכישה לא מתוכננת", d: "כל רכישה מעל 150 ₪ שלא תוכננה מחכה יומיים. רוב הרצונות חולפים." },
+        { t: "עברו על כל החיובים החודשיים הדיגיטליים", d: "בדקו מנויים כמו נטפליקס ואפל והחליטו אם כל אחד שווה את המחיר. בטלו, או עברו לתוכנית זולה יותר." },
+        { t: "הקפיאו קניות בגדים אונליין", d: "הסירו כרטיס שמור מאתרי אופנה, בטלו הודעות שיווק, ותנו לביגוד תקרה של כ-700 ₪ בחודש (היום כ-1,700 ₪)." },
+        { t: "משכו מזומן בשיטה קבועה", d: "משיכה אחת בשבוע בסכום קבוע, כ-250 ₪, במקום משיכות גדולות. מזומן שנעלם בלי מעקב הוא ההוצאה הכי קשה לראות." },
+        { t: "סווגו מחדש את “כללי” ב-RiseUp", d: "כ-2,000 ₪ בחודש יושבים בקטגוריה לא מסווגת. אחרי הסיווג תראו מה מתחבא שם ותוכלו לקבוע תקרות לפי נושא." }
+      ] },
+    { id: "bit", kind: "target", title: "העברות בביט ובפייבוקס", base: 5000, min: 1500, max: 5000, step: 100, def: 3500,
+      blurb: "הערכה: כ-5,000 ₪ בחודש בהעברות משתנות, בלי ההעברה הקבועה של 2,300 ₪ והוראת הקבע של 545 ₪.",
+      note: "ההערכה גסה. אחרי הסיווג בצעד הראשון תוכלו לדייק את הבסיס ואת היעד.",
+      steps: [
+        { t: "רכזו את ההעברות של שלושת החודשים האחרונים", d: "ב-RiseUp חפשו עסקאות עם BIT ו-PAYBOX, וסווגו כל העברה: קבועה (חוג, עזרה למשפחה), מתוכננת, או “כי נוח”." },
+        { t: "הפכו העברות קבועות להוראת קבע", d: "סכום ידוע ביום קבוע נכנס לתקציב הקבוע ולא מפתיע בסוף החודש." },
+        { t: "קבעו תקרה חודשית להעברות המשתנות", d: "היעד כאן 3,500 ₪ מתוך כ-5,000 ₪ היום. התאימו אותו אחרי הסיווג, כשרואים מה באמת קבוע." },
+        { t: "סכמו עם מי שמקבל מכם כסף", d: "אם חלק מההעברות הן לבני משפחה או לחברים, הסכימו על סכום חודשי ידוע במקום בקשות נקודתיות." }
+      ] },
+    { id: "real", kind: "real", title: "עצירת תשלומים חדשים", min: 0, max: 100, step: 5, def: 100,
+      blurb: "התשלומים החודשיים היו בממוצע 10,046 ₪. התשלומים שכבר קיימים יורדים בהדרגה לכ-2,800 ₪ במרץ, אבל רק אם לא מוסיפים חדשים.",
+      note: "הסליידר קובע כמה מהירידה הזו תתממש בפועל. 100% פירושו אפס תשלומים חדשים.",
+      steps: [
+        { t: "בקשו מחברות האשראי להגביל עסקאות בתשלומים", d: "בדרך כלל אפשר להגביל או לחסום תשלומים בכרטיס, ולהוריד את מסגרת האשראי לגובה ההוצאות המתוכננות. כך לא תפרסו רכישה בלי לשים לב." },
+        { t: "אפס תשלומים חדשים עד שמגיעים לאיזון", d: "רכישה שלא מתאימה לתקציב החודשי נדחית. אם היא הכרחית, היא נכנסת לתקציב של אותו חודש." },
+        { t: "סמנו מתי כל תשלום נגמר", d: "בחודש התזרים הנוכחי נגמרים חמישה תשלומים: דן קיסריה (1,682 ₪), מאצ׳ (244 ₪), זארה (192 ₪), טרמינל איקס (167 ₪) ואדיקט (152 ₪), בסך 2,437 ₪. תשלום סמסונג (166 ₪) נגמר בדצמבר." },
+        { t: "השאירו את הכסף שהתפנה בחיסכון", d: "ביום שבו תשלום נגמר, העבירו סכום זהה לחיסכון או לפירעון מינוס. אחרת הכסף שהתפנה יחזור להיות הוצאה." }
+      ] },
+    { id: "inc", kind: "inc", title: "שינוי בהכנסה", min: -5000, max: 5000, step: 250, def: 0,
+      blurb: "ההכנסה הממוצעת היא 44,018 ₪ בחודש. כאן אפשר לבדוק מה קורה אם היא עולה או יורדת.",
+      steps: [
+        { t: "תכננו לפי הממוצע, לא לפי החודש הטוב", d: "ההכנסה המשתנה (מגן הלב) הגיעה ל-13,820 ₪ באוקטובר, אבל ממוצע שלושת החודשים הוא כ-6,200 ₪. עודף מעל הממוצע עובר ישר לכרית הביטחון." },
+        { t: "הגישו כל תביעת החזר מחברות הביטוח", d: "בששת החודשים האחרונים נכנסו החזרים מחברות ביטוח. ודאו שאין טיפול או הוצאה מוכרת שנשארו בלי הגשה." },
+        { t: "בדקו זכאויות והטבות", d: "ודאו שכל קצבה והטבה שמגיעות לכם מנוצלות, ושלא פספסתם תאריך חידוש." },
+        { t: "מכרו מה שלא בשימוש", d: "ציוד ובגדים שיושבים בבית הם הכנסה חד-פעמית שאפשר להפנות לכרית הביטחון." }
+      ] }
+  ];
+
+  var CHECKS = [
+    { t: "משכנתא", d: "התשלום עלה מ-4,335 ₪ ל-6,540 ₪ בחודש מאז יולי (ביולי היה תשלום חריג של 7,975 ₪). שאלו בבנק מה השתנה: ריבית, הצמדה או סיום תקופה, והאם אפשר לשנות מסלול. הארכת תקופה מקטינה את התשלום החודשי אבל מגדילה את סך הריבית." },
+    { t: "הלוואות", d: "התשלום עלה לכ-3,237 ₪ באוקטובר, לעומת 1,200 עד 1,600 ₪ בחודשים הקודמים. הכינו רשימה מלאה: קרן, ריבית ותאריך סיום לכל הלוואה, ובדקו עם הבנק אם איחוד מוריד את העלות הכוללת." },
+    { t: "השיק הקבוע", d: "5,000 ₪ בכל חודש, ההוצאה הבודדת הגדולה אחרי המשכנתא. ודאו שאתם יודעים עד מתי היא רצה, ובדקו אם אפשר להפחית או לדחות." },
+    { t: "מינוס בעו״ש", d: "RiseUp לא מציג יתרה. אם יש מינוס, בדקו את גובה הריבית עליו. ריבית על מינוס יכולה לבלוע חלק מהחיסכון שתשיגו." },
+    { t: "פקדונות", d: "בין מאי ליולי נמשכו כ-25,500 ₪ מפקדונות. בדקו כמה נשאר, כדי לדעת על כמה זמן כרית כזו מספיקה." }
+  ];
+
+  var PHASES = [
+    { t: "עד סוף נובמבר", items: [
+      "הגבילו תשלומים בכרטיסי האשראי",
+      "מחקו כרטיסים שמורים מאפליקציות משלוחים ומאתרי אופנה",
+      "בדקו יתרת עו״ש ומינוס",
+      "זהו מה כולל השיק של 5,000 ₪ ומה ההעברות בביט ובפייבוקס",
+      "עדכנו יעדי קטגוריות ב-RiseUp לפי הסליידרים" ] },
+    { t: "דצמבר", items: [
+      "הפעילו תקרות שבועיות לאוכל ולסופר",
+      "בטלו מנויים שלא נחוצים",
+      "פנו לבנק לגבי המשכנתא וההלוואות",
+      "התחילו סקירה שבועית של שתי דקות בימי ראשון" ] },
+    { t: "ינואר עד מרץ", items: [
+      "בכל חודש השוו את המאזן בפועל לגרף כאן, והזיזו את הסליידרים לפי המציאות",
+      "העבירו לחיסכון כל תשלום שנגמר",
+      "ודאו שלא נוספו תשלומים חדשים" ] },
+    { t: "מאפריל", items: [
+      "בנו כרית ביטחון בגובה חודש הוצאות",
+      "החליטו אם להאיץ פירעון הלוואות או להמשיך לחסוך" ] }
+  ];
+
+  /* ---------- state + storage ---------- */
+  var KEY = "recovery-plan-v1";
+  function defaults(){
+    var v = {};
+    LEVERS.forEach(function(l){ v[l.id] = l.def; });
+    return { vals: v, checks: {}, month: 3 };
+  }
+  var state = defaults();
+  function load(){
+    try{
+      var raw = window.localStorage.getItem(KEY);
+      if(!raw) return;
+      var s = JSON.parse(raw);
+      if(s && s.vals){ Object.keys(state.vals).forEach(function(k){ if(typeof s.vals[k] === "number") state.vals[k] = s.vals[k]; }); }
+      if(s && s.checks) state.checks = s.checks;
+      if(s && typeof s.month === "number" && s.month >= 0 && s.month < MONTHS.length) state.month = s.month;
+    }catch(e){}
+  }
+  function save(){
+    try{ window.localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
+  }
+
+  /* ---------- helpers ---------- */
+  var nf = new Intl.NumberFormat("he-IL", { maximumFractionDigits: 0 });
+  function abs(n){ return nf.format(Math.abs(Math.round(n))); }
+  function sgn(n){ var r = Math.round(n); return (r > 0 ? "+" : r < 0 ? "−" : "") + nf.format(Math.abs(r)); }
+  function kfmt(v){ return (v < 0 ? "−" : v > 0 ? "+" : "") + (Math.abs(v) / 1000).toFixed(1) + "K"; }
+  function $(id){ return document.getElementById(id); }
+
+  function cuts(){
+    return LEVERS.reduce(function(a, l){ return l.kind === "target" ? a + (l.base - state.vals[l.id]) : a; }, 0);
+  }
+  function relief(mi){ return (BASE.inst - MONTHS[mi].sched) * state.vals.real / 100; }
+  function income(){ return BASE.income + state.vals.inc; }
+  function expense(mi){ return BASE.expense - cuts() - relief(mi); }
+  function net(mi){ return income() - expense(mi); }
+
+  /* ---------- build static pieces ---------- */
+  function leverHTML(l){
+    var steps = l.steps.map(function(s, i){
+      var id = l.id + "-" + i;
+      return '<li data-li="' + id + '"><label><input type="checkbox" data-check="' + id + '"><span><span class="t">' + s.t + '</span><span class="d">' + s.d + '</span></span></label></li>';
+    }).join("");
+    var ctl = '<div class="save"><span class="num" id="save-' + l.id + '"></span><span class="lbl" id="slbl-' + l.id + '"></span></div>' +
+      '<input type="range" id="rng-' + l.id + '" min="' + l.min + '" max="' + l.max + '" step="' + l.step + '" value="' + state.vals[l.id] + '" aria-label="' + l.title + '">' +
+      '<div class="readout"><span id="ro1-' + l.id + '"></span><span id="ro2-' + l.id + '"></span></div>';
+    return '<article class="lever" id="lever-' + l.id + '">' +
+      '<div><h3>' + l.title + '</h3><p class="blurb">' + l.blurb + '</p></div>' +
+      '<div class="ctl">' + ctl + '</div>' +
+      '<details><summary>איך מממשים <span class="prog" id="prog-' + l.id + '"></span></summary>' +
+      (l.note ? '<p class="note">' + l.note + '</p>' : '') +
+      '<ol class="steps">' + steps + '</ol></details></article>';
+  }
+
+  function buildStatic(){
+    $("leverList").innerHTML = LEVERS.map(leverHTML).join("");
+
+    $("chips").innerHTML = MONTHS.map(function(m, i){
+      return '<button type="button" class="chip" data-m="' + i + '" aria-pressed="false">' + m.n + '</button>';
+    }).join("");
+
+    $("checkList").innerHTML = CHECKS.map(function(c, i){
+      var id = "ck-" + i;
+      return '<li data-li="' + id + '"><label><input type="checkbox" data-check="' + id + '"><span><span class="t">' + c.t + '</span><span class="d">' + c.d + '</span></span></label></li>';
+    }).join("");
+
+    $("phaseList").innerHTML = PHASES.map(function(p, i){
+      var items = p.items.map(function(t, j){
+        var id = "tl-" + i + "-" + j;
+        return '<li data-li="' + id + '"><label><input type="checkbox" data-check="' + id + '"><span>' + t + '</span></label></li>';
+      }).join("");
+      return '<div class="phase"><h3>' + p.t + '</h3><ul>' + items + '</ul></div>';
+    }).join("");
+  }
+
+  /* ---------- updates ---------- */
+  function updateLevers(){
+    var mn = MONTHS[state.month].n;
+    LEVERS.forEach(function(l){
+      var v = state.vals[l.id], el;
+      if(l.kind === "target"){
+        var s = l.base - v;
+        $("save-" + l.id).textContent = "";
+        $("save-" + l.id).innerHTML = '<span class="n pos">' + sgn(s) + ' ₪</span>';
+        $("slbl-" + l.id).textContent = "חיסכון בחודש";
+        $("ro1-" + l.id).innerHTML = 'יעד: <span class="n">' + abs(v) + ' ₪</span>';
+        $("ro2-" + l.id).innerHTML = 'היום: <span class="n">' + abs(l.base) + ' ₪</span> (קיצוץ של ' + Math.round(s / l.base * 100) + '%)';
+      } else if(l.kind === "real"){
+        var r = relief(state.month);
+        $("save-" + l.id).innerHTML = '<span class="n pos">' + sgn(r) + ' ₪</span>';
+        $("slbl-" + l.id).textContent = "בחודש " + mn;
+        $("ro1-" + l.id).textContent = v + "% מהירידה מתממש";
+        $("ro2-" + l.id).innerHTML = 'תשלומים קיימים ב' + mn + ': <span class="n">' + abs(MONTHS[state.month].sched) + ' ₪</span>';
+      } else {
+        $("save-" + l.id).innerHTML = '<span class="n ' + (v > 0 ? "pos" : v < 0 ? "neg" : "") + '">' + (v === 0 ? "0" : sgn(v)) + ' ₪</span>';
+        $("slbl-" + l.id).textContent = "בהכנסה החודשית";
+        $("ro1-" + l.id).innerHTML = 'הכנסה: <span class="n">' + abs(income()) + ' ₪</span>';
+        $("ro2-" + l.id).textContent = "";
+      }
+    });
+  }
+
+  function updateMeter(){
+    var mi = state.month, inc = income(), exp = expense(mi), nt = inc - exp;
+    var first = -1;
+    for(var i = 0; i < MONTHS.length; i++){ if(net(i) >= 0){ first = i; break; } }
+    var h;
+    if(first === 0) h = "כבר מדצמבר המאזן חיובי";
+    else if(first > 0) h = "בקצב הזה מגיעים לאיזון ב" + MONTHS[first].n;
+    else h = "לא מגיעים לאיזון עד יוני. חסרים עוד " + abs(-net(MONTHS.length - 1)) + " ₪ בחודש";
+    $("headline").textContent = h;
+
+    $("netLbl").textContent = "מאזן חודשי ב" + MONTHS[mi].n;
+    var nn = $("netNum");
+    nn.textContent = (Math.round(nt) === 0 ? "0" : sgn(nt)) + " ₪";
+    nn.className = "n " + (nt >= 0 ? "pos" : "neg");
+
+    var sc = BASE.scale;
+    function pct(v){ return Math.max(0, Math.min(100, v / sc * 100)); }
+    $("fInc").style.width = pct(inc) + "%";
+    $("fExp").style.width = pct(exp) + "%";
+    $("vInc").textContent = abs(inc) + " ₪";
+    $("vExp").textContent = abs(exp) + " ₪";
+    var hi = $("hInc"), he = $("hExp");
+    if(exp > inc){
+      hi.style.insetInlineStart = pct(inc) + "%"; hi.style.width = pct(exp) - pct(inc) + "%";
+      hi.style.setProperty("--h", "var(--deficit)");
+      he.style.width = "0%";
+    } else {
+      he.style.insetInlineStart = pct(exp) + "%"; he.style.width = pct(inc) - pct(exp) + "%";
+      he.style.setProperty("--h", "var(--surplus)");
+      hi.style.width = "0%";
+    }
+
+    var rd = "ב" + MONTHS[mi].n + ": הכנסות " + abs(inc) + " ₪, הוצאות " + abs(exp) + " ₪. " +
+      "הקיצוצים תורמים " + abs(cuts()) + " ₪ בחודש, והירידה בתשלומים " + abs(relief(mi)) + " ₪, " +
+      (nt >= 0 ? "ונשאר עודף של " + abs(nt) + " ₪." : "ועדיין חסרים " + abs(-nt) + " ₪.");
+    $("monthRead").textContent = rd;
+
+    var chips = document.querySelectorAll(".chip");
+    for(var c = 0; c < chips.length; c++){
+      chips[c].setAttribute("aria-pressed", String(Number(chips[c].getAttribute("data-m")) === mi));
+    }
+  }
+
+  function updateChart(){
+    var W = 860, H = 330, padX = 24, top = 34, bot = 46;
+    var slots = 14, slotW = (W - padX * 2) / slots, bw = Math.min(36, slotW * 0.66);
+    var proj = MONTHS.map(function(m, i){ return net(i); });
+    var all = HISTORY.map(function(h){ return h.v; }).concat(proj);
+    var yMin = Math.min(-40000, Math.min.apply(null, all) - 3000);
+    var yMax = Math.max(6000, Math.max.apply(null, all) + 3000);
+    var plotH = H - top - bot;
+    function y(v){ return top + (yMax - v) / (yMax - yMin) * plotH; }
+    function cx(i){ return W - padX - (i + 0.5) * slotW; }
+    var y0 = y(0), g = "";
+
+    for(var t = Math.ceil(yMin / 10000) * 10000; t <= yMax; t += 10000){
+      if(t !== 0) g += '<line class="grid" x1="' + padX + '" x2="' + (W - padX) + '" y1="' + y(t) + '" y2="' + y(t) + '"/>';
+    }
+    g += '<line class="zero" x1="' + padX + '" x2="' + (W - padX) + '" y1="' + y0 + '" y2="' + y0 + '"/>';
+
+    var selSlot = 7 + state.month;
+    g += '<rect class="sel" x="' + (cx(selSlot) - slotW / 2) + '" y="' + (top - 14) + '" width="' + slotW + '" height="' + (plotH + 28) + '"/>';
+
+    function bar(v, slot, cls, extra, label){
+      var x = cx(slot) - bw / 2, yy, hh;
+      if(v >= 0){ yy = y(v); hh = Math.max(2, y0 - yy); } else { yy = y0; hh = Math.max(2, y(v) - y0); }
+      var ty = v >= 0 ? yy - 7 : yy + hh + 15;
+      return '<rect class="' + cls + '" x="' + x + '" y="' + yy + '" width="' + bw + '" height="' + hh + '"' + extra + '/>' +
+        '<text class="val" x="' + cx(slot) + '" y="' + ty + '" text-anchor="middle">' + kfmt(v) + '</text>';
+    }
+
+    HISTORY.forEach(function(h, i){
+      g += bar(h.v, i, "hist", "") +
+        '<text x="' + cx(i) + '" y="' + (H - bot + 20) + '" text-anchor="middle">' + h.s + '</text>';
+    });
+    g += '<text x="' + cx(6) + '" y="' + (H - bot + 20) + '" text-anchor="middle">נוב׳</text>' +
+      '<text x="' + cx(6) + '" y="' + (y0 - 8) + '" text-anchor="middle" style="font-size:11px">חלקי</text>';
+
+    MONTHS.forEach(function(m, i){
+      var v = proj[i], slot = 7 + i;
+      g += '<g class="slot" data-m="' + i + '" tabindex="0" role="button" aria-label="הצג את ' + m.n + ': ' + kfmt(v) + '">' +
+        '<rect x="' + (cx(slot) - slotW / 2) + '" y="' + (top - 14) + '" width="' + slotW + '" height="' + (plotH + 60) + '" fill="transparent"/>' +
+        bar(v, slot, "proj " + (v >= 0 ? "p" : "m"), "") +
+        '<text x="' + cx(slot) + '" y="' + (H - bot + 20) + '" text-anchor="middle">' + m.s + '</text></g>';
+    });
+
+    var hx1 = cx(0) + slotW / 2 - 4, hx2 = cx(5) - slotW / 2 + 4;
+    var px1 = cx(7) + slotW / 2 - 4, px2 = cx(13) - slotW / 2 + 4;
+    g += '<line class="grid" x1="' + hx1 + '" x2="' + hx2 + '" y1="' + (H - 14) + '" y2="' + (H - 14) + '" style="stroke:var(--ink)"/>' +
+      '<text class="grp" x="' + ((hx1 + hx2) / 2) + '" y="' + (H - 1) + '" text-anchor="middle">בפועל</text>' +
+      '<line class="grid" x1="' + px1 + '" x2="' + px2 + '" y1="' + (H - 14) + '" y2="' + (H - 14) + '" style="stroke:var(--ink)"/>' +
+      '<text class="grp" x="' + ((px1 + px2) / 2) + '" y="' + (H - 1) + '" text-anchor="middle">תחזית</text>';
+
+    $("chart").innerHTML = g;
+  }
+
+  function updateChecks(){
+    var cbs = document.querySelectorAll("input[data-check]");
+    var perLever = {}, total = 0, done = 0, tl = 0, tlDone = 0;
+    for(var i = 0; i < cbs.length; i++){
+      var id = cbs[i].getAttribute("data-check");
+      var on = !!state.checks[id];
+      cbs[i].checked = on;
+      var li = cbs[i].closest("li");
+      if(li) li.classList.toggle("done", on);
+      var key = id.split("-")[0];
+      if(key === "tl"){ tl++; if(on) tlDone++; }
+      else if(key !== "ck"){
+        perLever[key] = perLever[key] || { n: 0, d: 0 };
+        perLever[key].n++; if(on) perLever[key].d++;
+      }
+    }
+    LEVERS.forEach(function(l){
+      var p = perLever[l.id] || { n: l.steps.length, d: 0 };
+      $("prog-" + l.id).textContent = "(" + p.d + " מתוך " + p.n + ")";
+    });
+    $("allProg").textContent = "בוצעו " + tlDone + " מתוך " + tl + " פעולות בציר הזמן.";
+  }
+
+  function render(){
+    updateLevers(); updateMeter(); updateChart(); updateChecks();
+  }
+
+  /* ---------- events ---------- */
+  document.addEventListener("input", function(e){
+    var t = e.target;
+    if(t && t.id && t.id.indexOf("rng-") === 0){
+      state.vals[t.id.slice(4)] = Number(t.value);
+      save(); updateLevers(); updateMeter(); updateChart();
+    }
+  });
+  document.addEventListener("change", function(e){
+    var t = e.target;
+    if(t && t.hasAttribute && t.hasAttribute("data-check")){
+      state.checks[t.getAttribute("data-check")] = t.checked;
+      save(); updateChecks();
+    }
+  });
+  function pickMonth(i){
+    state.month = i; save(); updateLevers(); updateMeter(); updateChart();
+  }
+  document.addEventListener("click", function(e){
+    var chip = e.target.closest ? e.target.closest(".chip") : null;
+    if(chip){ pickMonth(Number(chip.getAttribute("data-m"))); return; }
+    var slot = e.target.closest ? e.target.closest("g.slot") : null;
+    if(slot){ pickMonth(Number(slot.getAttribute("data-m"))); }
+  });
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Enter" && e.key !== " ") return;
+    var slot = e.target.closest ? e.target.closest("g.slot") : null;
+    if(slot){ e.preventDefault(); pickMonth(Number(slot.getAttribute("data-m"))); }
+  });
+  $("resetBtn").addEventListener("click", function(){
+    state = defaults();
+    try{ window.localStorage.removeItem(KEY); }catch(e){}
+    LEVERS.forEach(function(l){ $("rng-" + l.id).value = l.def; });
+    render();
+  });
+
+  /* ---------- go ---------- */
+  load();
+  buildStatic();
+  LEVERS.forEach(function(l){ $("rng-" + l.id).value = state.vals[l.id]; });
+  render();
+})();
+</script>
+</body>
+</html>
